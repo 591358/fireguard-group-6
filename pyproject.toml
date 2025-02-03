@@ -1,0 +1,18 @@
+[project]
+name = "fireguard-group-6"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Daavoy",email = "jan-petter.daavoy@outlook.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11, <4.0"
+dependencies = [
+    "dynamic-frcm (>=1.0.1,<2.0.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

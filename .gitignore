@@ -1,0 +1,19 @@
+# Byte-compiled files
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment directories
+.venv/
+env/
+venv/
+.env
+# Logs
+*.log
+
+# Python IDE settings
+.idea/
+.vscode/
+
+# Mac system files
+.DS_Store
