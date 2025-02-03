@@ -10,7 +10,10 @@ After checking that the project runs as intenden, head to the [backend folder](/
 > - fastapi dev main.py   
 
 to check that <a href="https://fastapi.tiangolo.com/">fastAPI</a>, which is the API-framework we'll be using, works. It should look something like:
+
+
 ![alt text](images/image.png)
+
 
 ## Commands ran:
 <li>poetry init</li>
