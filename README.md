@@ -4,6 +4,8 @@ To run the project you will have to run:
 >- py main.py -> you have to create your own .env file and add the credentials <a href="https://pypi.org/project/dynamic-frcm/">as described</a>
 
 The .env file should be added in the src folder:
+
+
 ![alt text](/images/folderstructure.png)
 
 After checking that the project runs as intenden, head to the [backend folder](/backend/) and run:
