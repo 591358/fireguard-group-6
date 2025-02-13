@@ -1,6 +1,6 @@
 # fireguard-group-6
 To run the project you will have to run:
->- poetry install -> to initialize the packages
+>- poetry install -> to initialize the packages (might not be neccessary)
 >- py main.py -> you have to create your own .env file and add the credentials <a href="https://pypi.org/project/dynamic-frcm/">as described</a>
 
 The .env file should be added in the src folder:
