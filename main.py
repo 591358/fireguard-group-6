@@ -2,6 +2,10 @@ import datetime
 
 from frcm.frcapi import METFireRiskAPI
 from frcm.datamodel.model import Location
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 # sample code illustrating how to use the Fire Risk Computation API (FRCAPI)
 if __name__ == "__main__":
