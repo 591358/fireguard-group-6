@@ -3,6 +3,9 @@ on:
   issues:
     types: [opened]
 
+permissions:  
+  issues: write
+
 jobs:
   add-prefix:
     runs-on: ubuntu-latest
@@ -15,15 +18,13 @@ jobs:
             const prefix = "FGP-";
             const issue = context.payload.issue;
             const issueNumber = issue.number;
-            const title = issue.title;
             const expectedPrefix = `${prefix}${issueNumber} `;
 
-            // Only update if the prefix is missing
-            if (!title.startsWith(expectedPrefix)) {
-              github.rest.issues.update({
+            if (!issue.title.startsWith(expectedPrefix)) {
+              await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                title: expectedPrefix + title
+                title: expectedPrefix + issue.title
               });
             }
