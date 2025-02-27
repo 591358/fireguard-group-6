@@ -1,0 +1,29 @@
+name: "Auto Prefix Issue Titles"
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add-prefix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Add prefix to issue title"
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prefix = "FGP-";
+            const issue = context.payload.issue;
+            const issueNumber = issue.number;
+            const title = issue.title;
+            const expectedPrefix = `${prefix}${issueNumber} `;
+
+            // Only update if the prefix is missing
+            if (!title.startsWith(expectedPrefix)) {
+              github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                title: expectedPrefix + title
+              });
+            }
