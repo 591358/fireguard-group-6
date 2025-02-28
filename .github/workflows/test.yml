@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository  
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: List project files 
-        run: ls -l
+      - name: Debug:List all files in backend directory
+        run: ls -R backend/
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -26,16 +26,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f requirements.txt ]; then 
-            pip install -r requirements.txt; 
-          else 
-            echo "requirements.txt NOT FOUND! Skipping dependency installation."; 
-          fi
           python -m pip install --upgrade pip
           pip install pytest mongomock fastapi uvicorn pymongo
 
       - name: Verify `pytest` installation
-        run: pytest --version
-
-      - name: Run tests with pytest
+        run: pytest --version  
+        
+      - name: Run tests with pytest (Explicitly Specify `backend/`)
         run: pytest backend/ --maxfail=1 --disable-warnings -v
