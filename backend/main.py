@@ -22,6 +22,7 @@ def serialize_document(doc):
 def get_location_collection() -> Collection:
     return location_collection
 
+
 app = FastAPI()
 
 @app.post("/locations", response_model=Location)
