@@ -27,10 +27,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest mongomock fastapi uvicorn pymongo
+          pip install pytest mongomock fastapi uvicorn pymongo httpx
 
       - name: Verify `pytest` installation
         run: pytest --version  
         
-      - name: Run tests with pytest (Explicitly Specify `backend/`)
+      - name: Run tests with pytest
         run: pytest backend/ --maxfail=1 --disable-warnings -v
