@@ -1,64 +1,125 @@
-# fireguard-group-6
-To run the project you will have to run:
->- poetry install -> to initialize the packages (might not be neccessary)
->- py main.py -> you have to create your own .env file and add the credentials <a href="https://pypi.org/project/dynamic-frcm/">as described</a>
+# Fireguard Group 6
 
-The .env file should be added in the src folder:
+## Running the Project
+To run the project, follow these steps:
+
+1. Install dependencies:
+   ```sh
+   poetry install  # Might not be necessary if already installed
+   ```
+
+2. Create a `.env` file in the `src` folder and add the required credentials as described [here](https://pypi.org/project/dynamic-frcm/).
+
+3. Run the main script:
+   ```sh
+   py main.py
+   ```
+
+4. Navigate to the `backend` folder and start FastAPI:
+   ```sh
+   fastapi dev main.py
+   ```
+   This will start the FastAPI server, and you should see output similar to:
+   
+   ![alt text](images/image.png)
+
+## Installed Packages
+```sh
+poetry init
+poetry add dynamic-frcm
+poetry add python-dotenv
+pip install "fastapi[standard]"
+pip install pytest httpx mongomock
+```
+
+---
+
+# Creating a FastAPI Endpoint
+FastAPI makes it easy to create and update endpoints. Below is a simplified guide.
+
+###  Define Your API Route in `main.py`
+```python
+from fastapi import FastAPI, HTTPException, Depends
+from pymongo.collection import Collection
+from bson import ObjectId
+from database import get_location_collection
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class UpdateLocationModel(BaseModel):
+    name: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+
+@app.put("/location/{location_id}")
+async def update_location(location_id: str, data: UpdateLocationModel, collection: Collection = Depends(get_location_collection)):
+    object_id = ObjectId(location_id)
+    update_data = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields provided for update")
+
+    result = collection.update_one({"_id": object_id}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    return {"message": "Location updated", "updated_fields": update_data}
+```
+
+###  Test with Swagger UI
+Go to:
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# Writing Tests for FastAPI Endpoints
+
+### Create a Test in `test.py`
+
+```python
+import mongomock
+from fastapi.testclient import TestClient
+from backend.main import app, get_location_collection
+
+@pytest.fixture
+def client():
+    mock_client = mongomock.MongoClient()
+    app.dependency_overrides[get_location_collection] = lambda: mock_client.db.location_collection
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+def test_update_location(client):
+    mock_collection = app.dependency_overrides[get_location_collection]()
+    test_location = {"_id": mongomock.ObjectId(), "name": "Old Name"}
+    mock_collection.insert_one(test_location)
+    location_id = str(test_location["_id"])
+    response = client.put(f"/location/{location_id}", json={"name": "New Name"})
+    assert response.status_code == 200
+    assert response.json()["updated_fields"]["name"] == "New Name"
+```
+
+### Run Tests
+```sh
+pytest -v
+```
+
+---
+
+# 🛠️ Git Commands Cheat Sheet
+Here are some useful Git commands:
+
+- `git clone <repository_url>` → Clone a remote repository
+- `git pull` → Fetch and merge changes from the remote repository
+- `git push` → Push local commits to the remote repository
+- `git add .` → Stage all modified files
+- `git commit -m "<message>"` → Commit staged files with a message
+- `git status` → View the state of your repository
+- `git merge <branch_name>` → Merge another branch into the current one
+- `git checkout -b <branch_name>` → Create a new branch and switch to it
+- `git stash` → Temporarily save uncommitted changes
 
 
-![alt text](/images/folderstructure.png)
-
-After checking that the project runs as intenden, head to the [backend folder](/backend/) and run:
-> - fastapi dev main.py   
-
-to check that <a href="https://fastapi.tiangolo.com/">fastAPI</a>, which is the API-framework we'll be using, works. It should look something like:
-
-
-![alt text](images/image.png)
-
-
-## Commands ran:
-<li>poetry init</li>
-<li>poetry add dynamic-frcm</li>
-<li>poetry add python-dotenv</li>
-<li>pip install "fastapi[standard]"</li>
-
-
-# Git Commands Cheat Sheet
-These are just added from the top of my head, so syntax and explanation may be a bit off, but feel free to google them. As some of the are necessary and others are convenient.
-
-### `git clone <repository_url>`
-Creates a local copy of a remote repository. This is typically the first step when you want to start working on an existing project.
-
-### `git pull`
-Fetches the latest changes from the remote repository and merges them into your current branch. This keeps your local copy up to date with the project.
-
-### `git push` (or `git push --set-upstream origin <branch_name>`)
-Pushes the committed changes to the remote repository. If the branch doesn't exist on the remote yet, use the `--set-upstream` option to set the remote tracking branch.
-
-### `git add .`
-Stages all the modified files in the current directory and its subdirectories for commit. Use with caution, as this will include all changes, even those you might not want to commit.
-
-### `git add <file_name>`
-Stages a specific file for commit. Only the specified file will be included in the next commit, allowing you to be more selective about what you commit.
-
-### `git commit -m "<message>"`
-Commits the staged files to the local repository with a descriptive message. The message should explain the purpose of the commit.
-
-### `git status`
-Displays the status of your working directory and staging area. It shows which files have been modified, which are staged for commit, and which are untracked, helping you understand the current state of your repository.
-
-### `git merge <branch_name>`
-Merges the specified branch into the branch you're currently on. This is how you integrate changes from one branch into another.
-
-### `git stash`
-Temporarily saves your changes on a local stack, allowing you to revert your working directory to the last commit. You can later retrieve these stashed changes using `git stash pop` to apply them back.
-
-### `git checkout -b <branch_name>`
-Creates a new branch and switches to it immediately. This is useful for starting new features or tasks without affecting the main branch.
-
-### `git checkout <branch_name>`
-Switches to the specified branch, updating your working directory to reflect the state of that branch. This allows you to work on different parts of the project in isolation.
-
-### `git restore .` or `git restore <file_name>`
-Restores the local (unstaged, I think) changes to the origin. Useful if you want to discard the local changes.
