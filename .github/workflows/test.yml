@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest mongomock fastapi uvicorn pymongo httpx
+          pip install pytest mongomock fastapi uvicorn pymongo httpx python-dotenv
 
       - name: Verify `pytest` installation
         run: pytest --version  
