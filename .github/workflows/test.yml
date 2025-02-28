@@ -38,4 +38,4 @@ jobs:
         run: pytest --version
 
       - name: Run tests with pytest
-        run: pytest --maxfail=1 --disable-warnings -v
+        run: pytest backend/ --maxfail=1 --disable-warnings -v
