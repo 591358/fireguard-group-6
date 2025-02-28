@@ -25,10 +25,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"  # Use the same version as in your project
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           python -m pip install --upgrade pip
           pip install -r requirements.txt  # Ensure your project has this file
           pip install pytest mongomock fastapi uvicorn  # Ensure required test dependencies
