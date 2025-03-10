@@ -14,7 +14,7 @@ jobs:
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL}}
         REALM_NAME: ${{ secrets.REALM_NAME }}
-        KEYCLOAK_CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        CLIENT_ID: ${{ secrets.CLIENT_ID }}
         KEYCLOAK_USERNAME: ${{ secrets.USERNAME }}
         KEYCLOAK_PASSWORD: ${{ secrets.PASSWORD }}
     steps:
@@ -41,7 +41,7 @@ jobs:
         run: |
           KEYCLOAK_TOKEN=$(curl -X POST "$KEYCLOAK_URL/realms/$KEYCLOAK_REALM/protocol/openid-connect/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=$KEYCLOAK_CLIENT_ID" \
+            -d "client_id=$CLIENT_ID" \
             -d "grant_type=password" \
             -d "username=$KEYCLOAK_USERNAME" \
             -d "password=$KEYCLOAK_PASSWORD" | jq -r .access_token)
