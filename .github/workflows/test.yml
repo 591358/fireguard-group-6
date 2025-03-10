@@ -19,6 +19,10 @@ jobs:
             KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PASSWORD }}
         ports:
             - 8080:8080
+        options: >-
+            --entrypoint /opt/keycloak/bin/kc.sh
+            --
+            start-dev
        
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL}}
