@@ -4,13 +4,6 @@ import json
 import base64
 import logging
 logger = logging.getLogger(__name__)
-def decode_jwt(token: str):
-    """ Decodes and prints JWT token for debugging """
-    try:
-        decoded = jwt.decode(token, options={"verify_signature": False}, algorithms=["RS256"])
-        logger.info(f"✅ Decoded JWT: {json.dumps(decoded, indent=2)}")
-    except Exception as e:
-        logger.error(f"❌ Error decoding JWT: {e}")
 
 
 def decode_jwt(token: str):
