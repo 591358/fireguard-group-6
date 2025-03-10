@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch
 from backend.main import app, get_location_collection
 import logging
+import os
+
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,8 +28,14 @@ def client():
     # Clear overrides after test
     app.dependency_overrides.clear()
 
+
+def get_test_token():
+    """Fetches Keycloak access token from GitHub Actions environment"""
+    return os.getenv("ACCESS_TOKEN")
+
 def test_get_locations(client):
-    response = client.get("/locations")
+    headers = {"Authorization": f"Bearer {get_test_token()}"}
+    response = client.get("/locations", headers=headers)
     assert response.status_code == 200
     data = response.json()
 
