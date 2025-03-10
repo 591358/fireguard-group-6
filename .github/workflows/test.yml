@@ -19,14 +19,6 @@ jobs:
             KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PASSWORD }}
         ports:
             - 8080:8080
-        options: >-
-          --entrypoint /opt/keycloak/bin/kc.sh
-          --health-cmd "curl --fail http://localhost:8080"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-          --
-          start-dev
        
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL}}
