@@ -39,7 +39,7 @@ jobs:
      
       - name: Fetch Keycloak Access Token
         run: |
-          KEYCLOAK_TOKEN=$(curl -X POST "$KEYCLOAK_URL/realms/$KEYCLOAK_REALM/protocol/openid-connect/token" \
+          KEYCLOAK_TOKEN=$(curl -X POST "$KEYCLOAK_URL/realms/$REALM_NAME/protocol/openid-connect/token" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "client_id=$CLIENT_ID" \
             -d "grant_type=password" \
