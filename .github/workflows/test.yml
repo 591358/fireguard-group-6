@@ -36,7 +36,12 @@ jobs:
 
       - name: Verify `pytest` installation
         run: pytest --version  
-     
+      - name: Debug environment
+        run: |
+          echo "KEYCLOAK_URL is set to: ${KEYCLOAK_URL}"
+          echo "KEYCLOAK_REALM is set to: ${KEYCLOAK_REALM}"
+          echo "KEYCLOAK_CLIENT_ID is set to: ${KEYCLOAK_CLIENT_ID}"
+
       - name: Fetch Keycloak Access Token
         run: |
           KEYCLOAK_TOKEN=$(curl -X POST "$KEYCLOAK_URL/realms/$REALM_NAME/protocol/openid-connect/token" \
