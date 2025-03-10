@@ -14,19 +14,19 @@ jobs:
     services:
       keycloak:
         image: quay.io/keycloak/keycloak:26.1.3    # or whichever version you need
-        ports:
-          - 8080:8080
         env:
-          KEYCLOAK_USER: ${{ secrets.USERNAME }}
-          KEYCLOAK_PASSWORD: ${{ secrets.PASSWORD }}
-          # For modern Keycloak versions, the startup command can differ. For older versions, you might need KEYCLOAK_IMPORT, etc.
+            KEYCLOAK_ADMIN: ${{ secrets.USERNAME }}
+            KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PASSWORD }}
+        ports:
+            - 8080:8080
         options: >-
-          --health-cmd "curl --fail http://localhost:8080" 
-          --health-interval 5s 
-          --health-timeout 5s 
+          --entrypoint "/bin/bash"
+          -c "exec /opt/keycloak/bin/kc.sh start-dev"
+          --health-cmd "curl --fail http://localhost:8080"
+          --health-interval 5s
+          --health-timeout 5s
           --health-retries 5
-        # NOTE: You may also need additional startup params 
-        # depending on your Keycloak version
+       
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL}}
         REALM_NAME: ${{ secrets.REALM_NAME }}
