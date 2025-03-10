@@ -11,19 +11,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      keycloak:
-        image: quay.io/keycloak/keycloak:26.1.3    # or whichever version you need
-        env:
-            KEYCLOAK_ADMIN: ${{ secrets.USERNAME }}
-            KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PASSWORD }}
-        ports:
-            - 8080:8080
-        options: >-
-            --entrypoint /opt/keycloak/bin/kc.sh
-            --
-            start-dev
-       
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL}}
         REALM_NAME: ${{ secrets.REALM_NAME }}
@@ -54,17 +41,29 @@ jobs:
           echo "KEYCLOAK_URL is set to: ${KEYCLOAK_URL}"
           echo "KEYCLOAK_REALM is set to: ${KEYCLOAK_REALM}"
           echo "KEYCLOAK_CLIENT_ID is set to: ${KEYCLOAK_CLIENT_ID}"
-      - name: Wait for Keycloak to be ready
+      - name: Start Keycloak container
+        env:
+          KEYCLOAK_ADMIN: ${{ secrets.USERNAME }}
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          # A small wait or a health-check loop
-          for i in $(seq 1 30); do
-            echo "Checking Keycloak is up..."
-            if curl -s http://localhost:8080/; then
-              echo "Keycloak is responding."
-              break
-            fi
-            sleep 2
-          done
+          docker run -d --name keycloak \
+            -p 8080:8080 \
+            -e KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN}" \
+            -e KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD}" \
+            quay.io/keycloak/keycloak:26.1.3 \
+            start-dev
+
+      - name: Wait for Keycloak
+        run: |
+            for i in {1..30}; do
+              echo "Checking Keycloak is up..."
+              if curl -s http://localhost:8080/ > /dev/null; then
+                echo "Keycloak is responding."
+                break
+              fi
+              sleep 2
+            done
+     
       - name: Fetch Keycloak Access Token
         run: |
           KEYCLOAK_TOKEN=$(curl -X POST "$KEYCLOAK_URL/realms/$REALM_NAME/protocol/openid-connect/token" \
