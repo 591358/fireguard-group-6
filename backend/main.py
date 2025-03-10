@@ -19,7 +19,7 @@ load_dotenv()
 
 
 keycloak_config = KeycloakConfiguration(
-    url=os.getenv("KEYCLOACK_URL"),
+    url=os.getenv("KEYCLOAK_URL"),
     realm=os.getenv("REALM_NAME"),
     client_id=os.getenv("CLIENT_ID"),
     client_secret=os.getenv("CLIENT_SECRET"),
