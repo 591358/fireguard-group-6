@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import pytest
 import mongomock
 from fastapi.testclient import TestClient
@@ -6,7 +7,7 @@ from backend.main import app, get_location_collection
 import logging
 import os
 
-
+load_dotenv()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
