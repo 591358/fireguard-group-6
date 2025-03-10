@@ -1,15 +1,34 @@
 import os
 from typing import Union
 from fastapi import Depends, FastAPI, HTTPException
+from backend.keyCloakUtils import check_role, decode_jwt
 from backend.mongo import location_collection
 from backend.models.models import Location, CreateLocationModel, UpdateLocationModel
 from pymongo.collection import Collection
 from fastapi import FastAPI, Request
+from fastapi_keycloak_middleware import KeycloakConfiguration, setup_keycloak_middleware, CheckPermissions,AuthorizationMethod
 from bson import ObjectId
+from dotenv import load_dotenv
 import logging
 
+
+app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+load_dotenv()
+
+
+keycloak_config = KeycloakConfiguration(
+    url=os.getenv("KEYCLOACK_URL"),
+    realm=os.getenv("REALM_NAME"),
+    client_id=os.getenv("CLIENT_ID"),
+    client_secret=os.getenv("CLIENT_SECRET"),
+)
+
+setup_keycloak_middleware(
+     app,
+     keycloak_configuration=keycloak_config,
+ )
 
 def serialize_document(doc):
     return {
@@ -23,7 +42,16 @@ def get_location_collection() -> Collection:
     return location_collection
 
 
-app = FastAPI()
+@app.get("/user")
+async def user_route(request: Request):
+    user = await check_role(request, ["protected"])
+    return {"message": f"Hello {user['preferred_username']}, you are a user"}
+
+@app.get("/admin")
+async def user_route(request: Request):
+    user = await check_role(request, ["admin"])
+    return {"message": f"Hello {user['preferred_username']}, you are an admin"}
+
 
 @app.post("/locations", response_model=Location)
 async def create_location(location: CreateLocationModel, collection: Collection = Depends(get_location_collection)):
