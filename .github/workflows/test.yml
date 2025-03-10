@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
         KEYCLOAK_URL: ${{ secrets.KEYCLOACK_URL}}
-        KEYCLOAK_REALM: ${{ secrets.KEYCLOAK_REALM }}
+        KEYCLOAK_REALM: ${{ secrets.REALM_NAME }}
         KEYCLOAK_CLIENT_ID: ${{ secrets.CLIENT_ID }}
         KEYCLOAK_USERNAME: ${{ secrets.USERNAME }}
         KEYCLOAK_PASSWORD: ${{ secrets.PASSWORD }}
