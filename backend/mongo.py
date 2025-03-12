@@ -14,3 +14,4 @@ client = MongoClient(uri)
 db = client.Fireguard
 
 location_collection: Collection = db["locations"]
+user_collection: Collection = db["users"]
