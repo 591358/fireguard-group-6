@@ -1,54 +1,61 @@
+import os
+os.environ["TESTING"] = "True"
 from dotenv import load_dotenv
 import pytest
 import mongomock
 from fastapi.testclient import TestClient
 from unittest.mock import patch
 from backend.main import app, get_location_collection
+from backend.keyCloakUtils import get_current_user
 import logging
-import os
-
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Use mongomock to create a fake MongoDB instance
+
 @pytest.fixture
-def client():
+def mock_current_user():
+    return {
+        "sub": "12345",
+        "email": "test@example.com",
+        "preferred_username": "testuser"
+    }
+
+@pytest.fixture
+def client(mock_current_user):
     mock_client = mongomock.MongoClient()
     mock_db = mock_client.db
     mock_collection = mock_db.location_collection  # Mocked collection
-    # Insert test data into mock collection
+    
     test_locations = [
         {"_id": mongomock.ObjectId(), "locationName": "New York", "latitude": 40.7128, "longitude": -74.0060},
         {"_id": mongomock.ObjectId(), "locationName": "San Francisco", "latitude": 37.7749, "longitude": -122.4194},
     ]
     mock_collection.insert_many(test_locations)
-    # Override FastAPI dependency to return the mock collection
+    
+    # Override dependencies
     app.dependency_overrides[get_location_collection] = lambda: mock_collection
+    app.dependency_overrides[get_current_user] = lambda: mock_current_user 
+    
     yield TestClient(app)
-    # Clear overrides after test
     app.dependency_overrides.clear()
 
 
-def get_test_token():
-    """Fetches Keycloak access token from GitHub Actions environment"""
-    return os.getenv("ACCESS_TOKEN")
 
 def test_get_locations(client):
-    headers = {"Authorization": f"Bearer {get_test_token()}"}
-    response = client.get("/locations", headers=headers)
+    response = client.get("/locations")
     assert response.status_code == 200
-    data = response.json()
+    assert len(response.json()) == 2
 
-    assert len(data) == 2
     expected_data = [
         {"locationName": "New York", "latitude": 40.7128, "longitude": -74.0060},
         {"locationName": "San Francisco", "latitude": 37.7749, "longitude": -122.4194},
     ]
+
     for i, loc in enumerate(expected_data):
-        assert data[i]["locationName"] == loc["locationName"]
-        assert data[i]["latitude"] == loc["latitude"]
-        assert data[i]["longitude"] == loc["longitude"]
+        assert response.json()[i]["locationName"] == loc["locationName"]
+        assert response.json()[i]["latitude"] == loc["latitude"]
+        assert response.json()[i]["longitude"] == loc["longitude"]
 
 def test_insert_location(client):
     mock_collection = app.dependency_overrides[get_location_collection]()

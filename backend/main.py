@@ -18,17 +18,15 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
-keycloak_config = KeycloakConfiguration(
-    url=os.getenv("KEYCLOAK_URL"),
-    realm=os.getenv("REALM_NAME"),
-    client_id=os.getenv("CLIENT_ID"),
-    client_secret=os.getenv("CLIENT_SECRET"),
-)
+if os.getenv("TESTING") != "True":
+    keycloak_config = KeycloakConfiguration(
+        url=os.getenv("KEYCLOAK_URL"),
+        realm=os.getenv("REALM_NAME"),
+        client_id=os.getenv("CLIENT_ID"),
+        client_secret=os.getenv("CLIENT_SECRET"),
+    )
+    setup_keycloak_middleware(app, keycloak_configuration=keycloak_config)
 
-setup_keycloak_middleware(
-     app,
-     keycloak_configuration=keycloak_config,
- )
 
 def serialize_document(doc):
     return {
