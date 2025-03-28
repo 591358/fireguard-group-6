@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+      - keycloak
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080  # Ensure Keycloak URL is accessible from the FastAPI container
+      - REALM_NAME=fireguard
+      - CLIENT_ID=my-client-id
+      - CLIENT_SECRET=my-client-secret
+    env_file:
+      - .env
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    ports:
+      - "8080:8080"  # Exposing Keycloak on port 8080
+    environment:
+      - KEYCLOAK_ADMIN=admin       # Bootstrap admin user
+      - KEYCLOAK_ADMIN_PASSWORD=admin # Bootstrap admin password
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    command: ["start-dev"]  # Automatically starts Keycloak in development mode
+    
+
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:8080/auth/realms/master"]
+      interval: 10s
+      retries: 5
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
+  keycloak_data:
