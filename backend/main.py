@@ -3,7 +3,7 @@ from typing import Union
 from fastapi import Depends, FastAPI, HTTPException
 from backend.keyCloakUtils import check_role, decode_jwt
 from backend.mongo import location_collection
-from backend.models.models import Location, CreateLocationModel, UpdateLocationModel
+from backend.models.models import Location, CreateLocationModel, UpdateLocationModel, User
 from pymongo.collection import Collection
 from fastapi import FastAPI, Request
 from fastapi_keycloak_middleware import KeycloakConfiguration, setup_keycloak_middleware, CheckPermissions,AuthorizationMethod
@@ -39,6 +39,10 @@ def serialize_document(doc):
 def get_location_collection() -> Collection:
     return location_collection
 
+
+# @app.post("/users")
+# def create_user(user: User):
+#     response = 
 
 @app.get("/user")
 async def user_route(request: Request):

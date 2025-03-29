@@ -8,14 +8,10 @@ services:
     depends_on:
       - mongodb
       - keycloak
-    environment:
-      - KEYCLOAK_URL=http://keycloak:8080  # Ensure Keycloak URL is accessible from the FastAPI container
-      - REALM_NAME=fireguard
-      - CLIENT_ID=my-client-id
-      - CLIENT_SECRET=my-client-secret
     env_file:
       - .env
-
+    volumes:
+        - ./.env:/.env
   keycloak:
     image: quay.io/keycloak/keycloak
     ports:

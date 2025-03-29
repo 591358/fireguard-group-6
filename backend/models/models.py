@@ -16,3 +16,12 @@ class UpdateLocationModel(BaseModel):
     locationName: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    
+    
+class User(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
