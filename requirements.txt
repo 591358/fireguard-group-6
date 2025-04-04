@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pytest
+mongomock
+httpx
+pymongo
+python-dotenv
+python-jose
+fastapi_keycloak_middleware

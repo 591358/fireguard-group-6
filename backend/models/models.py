@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 
 class Location(BaseModel):
     id: str
@@ -16,3 +16,18 @@ class UpdateLocationModel(BaseModel):
     locationName: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    
+class User(BaseModel):
+    id: str
+    username: str
+    email: str
+    roles: List[str]
+
+class CreateUser(BaseModel):
+    username: str
+    password: str
+    email:  str
+
+class TokenData(BaseModel):
+    username: str
+    roles: List[str]

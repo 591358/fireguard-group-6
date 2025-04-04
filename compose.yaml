@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+      - keycloak
+    env_file:
+      - .env
+    volumes:
+        - ./.env:/.env
+    environment:
+      - LOG_LEVEL=DEBUG
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    ports:
+      - "8080:8080"
+    environment:
+       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    command: ["start-dev"]
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:8080/auth/realms/master"]
+      interval: 10s
+      retries: 5
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
+  keycloak_data:
