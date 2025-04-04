@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   fastapi:
     build: .
@@ -12,18 +11,19 @@ services:
       - .env
     volumes:
         - ./.env:/.env
+    environment:
+      - LOG_LEVEL=DEBUG
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug
   keycloak:
     image: quay.io/keycloak/keycloak
     ports:
-      - "8080:8080"  # Exposing Keycloak on port 8080
+      - "8080:8080"
     environment:
-      - KEYCLOAK_ADMIN=admin       # Bootstrap admin user
-      - KEYCLOAK_ADMIN_PASSWORD=admin # Bootstrap admin password
+       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - keycloak_data:/opt/keycloak/data
-    command: ["start-dev"]  # Automatically starts Keycloak in development mode
-    
-
+    command: ["start-dev"]
     depends_on:
       - mongodb
     healthcheck:
