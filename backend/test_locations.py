@@ -1,44 +1,58 @@
 import os
+
+from backend.auth import get_current_user
+from backend.mongo import get_location_collection
+
 os.environ["TESTING"] = "True"
-from dotenv import load_dotenv
-import pytest
+import logging
+
 import mongomock
+import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from unittest.mock import patch
-from backend.main import app, get_location_collection
-from backend.keyCloakUtils import get_current_user
+from backend.main import app
+from backend.models.models import TokenData
 import logging
+
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-
 @pytest.fixture
 def mock_current_user():
-    return {
-        "sub": "12345",
-        "email": "test@example.com",
-        "preferred_username": "testuser"
-    }
+    return TokenData(
+        username="testUser",
+        roles=["User"]
+    )
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def client(mock_current_user):
     mock_client = mongomock.MongoClient()
     mock_db = mock_client.db
-    mock_collection = mock_db.location_collection  # Mocked collection
+    mock_collection = mock_db.location_collection
     
     test_locations = [
         {"_id": mongomock.ObjectId(), "locationName": "New York", "latitude": 40.7128, "longitude": -74.0060},
         {"_id": mongomock.ObjectId(), "locationName": "San Francisco", "latitude": 37.7749, "longitude": -122.4194},
     ]
     mock_collection.insert_many(test_locations)
+
+    print("Overriding dependencies for testing...")
     
-    # Override dependencies
     app.dependency_overrides[get_location_collection] = lambda: mock_collection
     app.dependency_overrides[get_current_user] = lambda: mock_current_user 
     
     yield TestClient(app)
+    
     app.dependency_overrides.clear()
+
 
 
 
@@ -66,6 +80,8 @@ def test_insert_location(client):
         "longitude": 50.0
     }
     response = client.post("/locations", json=payLoad)
+    print(f"Response status: {response.status_code}")
+    print(f"Response body: {response.text}")
     assert response.status_code == 200, response.text
     data = response.json()
     

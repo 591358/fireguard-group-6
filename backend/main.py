@@ -1,37 +1,52 @@
 import os
-from fastapi import Depends, FastAPI, HTTPException
-from backend.keyCloakUtils import check_role
-from backend.mongo import location_collection,user_collection
-from backend.models.models import Location, CreateLocationModel, UpdateLocationModel, User,CreateUserModel
-from pymongo.collection import Collection
-from fastapi import FastAPI, Request
-from fastapi_keycloak_middleware import KeycloakConfiguration, setup_keycloak_middleware
-from bson import ObjectId
+from typing import Collection, List
+
 from dotenv import load_dotenv
-import logging
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2AuthorizationCodeBearer
+from mongomock import ObjectId
+from backend.mongo import get_location_collection, get_user_collection, location_collection, migrate_users_sync, user_collection
+from backend.auth import get_admin_token, has_role, validate_token
+from backend.create_user import (assign_role_to_user, create_new_user,
+                                 create_user_in_db)
+from backend.models.models import (CreateLocationModel, CreateUser, Location,
+                                   TokenData, UpdateLocationModel, User)
+from backend.mongo import (serialize_document)
 
-
-app = FastAPI()
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 load_dotenv()
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
+REALM_NAME = os.getenv("REALM_NAME")
+CLIENT_ID = os.getenv("CLIENT_ID")
+TESTING = os.getenv("TESTING") == "True"
+
+oauth2_scheme = OAuth2AuthorizationCodeBearer(
+    authorizationUrl=f"{KEYCLOAK_URL}/realms/{REALM_NAME}/protocol/openid-connect/auth",
+    tokenUrl=f"{KEYCLOAK_URL}/realms/{REALM_NAME}/protocol/openid-connect/token",
+    auto_error=False
+)
+app = FastAPI()
+if not TESTING:
+    async def get_current_user(token: str = Depends(oauth2_scheme)):
+        if not token:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        return await validate_token(token)
+else:
+    async def get_current_user(token: str = Depends(oauth2_scheme)): 
+        return TokenData(username="test_user", roles=["Admin", "User"])
 
 
-if os.getenv("TESTING") != "True":
-    keycloak_config = KeycloakConfiguration(
-        url=os.getenv("KEYCLOAK_URL"),
-        realm=os.getenv("REALM_NAME"),
-        client_id=os.getenv("CLIENT_ID"),
-        client_secret=os.getenv("CLIENT_SECRET"),
-        exclude_patterns=["/users"]  # explicitly exclude this endpoint from auth
 
-    )
-    setup_keycloak_middleware(app, keycloak_configuration=keycloak_config)
+@app.get("/migrate-users")
+def run_migration():
+    migrate_users_sync()
+    return {"message": "Migration completed"}
+
 
 user_fields_map = {
     "id": "_id",
-    "userName": "userName",
-    "password": "password",
+    "username": "username",
+    "email": "email",
+    "roles": "roles",
 }
 
 location_fields_map = {
@@ -40,69 +55,35 @@ location_fields_map = {
     "latitude": "latitude",
     "longitude": "longitude",
 }
-def serialize_document(doc, fields_map):
-    """
-    Generic function to serialize MongoDB document.
-    
-    Args:
-        doc (dict): The MongoDB document to serialize.
-        fields_map (dict): A mapping of the field names to be serialized for the document.
-    
-    Returns:
-        dict: The serialized document with the specified fields.
-    """
-    serialized_doc = {}
-    for field, field_name in fields_map.items():
-        serialized_doc[field] = str(doc.get(field_name)) if doc.get(field_name) else None
-    return serialized_doc
+
+@app.get("/public")
+async def public_endpoint():
+    return {"message": "This is a public endpoint accessible to everyone."}
+
+@app.get("/protected")
+async def protected_endpoint(current_user: TokenData = Depends(get_current_user)):
+    return {
+        "message": f"Hello {current_user.username}, you are authenticated!",
+        "roles": current_user.roles,
+    }
+
+@app.post("/create_user/")
+async def create_user_endpoint(user: CreateUser):
+    access_token = await get_admin_token()
+    created_user = await create_new_user(user, access_token)
+    if "id" not in created_user:
+        raise HTTPException(status_code=400, detail="User ID not found in Keycloak response")
+    stored_user = await create_user_in_db(user)
+    await assign_role_to_user(created_user["id"], "User", access_token)
+    return {"message": "User created and role assigned", "user": created_user, "stored in db": stored_user}
+
+@app.get("/users", response_model=List[User], dependencies=[Depends(has_role("Admin"))])
+async def get_all_users(collection: Collection = Depends(get_user_collection)):
+    users = collection.find()
+    return [serialize_document(doc, user_fields_map) for doc in users]
 
 
-def get_location_collection() -> Collection:
-    return location_collection
-
-def get_user_collection() -> Collection:
-    return user_collection
-
-@app.get("/users", response_model=list[User])
-async def get_users(collection: Collection = Depends(get_user_collection)):
-    documents = collection.find()
-    return [serialize_document(doc, user_fields_map) for doc in documents]
-
-
-@app.delete("/user/{user_id}", response_model=dict)
-async def delete_user(user_id: str, collection: Collection = Depends(get_user_collection)):
-    try:
-        object_id = ObjectId(user_id)
-    except Exception as e:
-        logger.error(f"Error converting user_id to ObjectId: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid id format")
-    res = collection.delete_one({"_id": object_id})
-    if res.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"detail": "User deleted successfully"}
-
-
-@app.post("/users", response_model=User)
-async def create_user(user: CreateUserModel, collection: Collection = Depends(get_user_collection)):
-    body = user.model_dump()
-    result = collection.insert_one(body)
-    created_user = collection.find_one({"_id": result.inserted_id})
-    if not created_user:
-        raise HTTPException(status_code=500, detail="Failed to retrieve inserted document")
-    return serialize_document(created_user, user_fields_map)
-
-# @app.get("/user")
-# async def user_route(request: Request):
-#     user = await check_role(request, ["protected"])
-#     return {"message": f"Hello {user['preferred_username']}, you are a user"}
-
-# @app.get("/admin")
-# async def user_route(request: Request):
-#     user = await check_role(request, ["admin"])
-#     return {"message": f"Hello {user['preferred_username']}, you are an admin"}
-
-
-@app.post("/locations", response_model=Location)
+@app.post("/locations", response_model=Location, dependencies=[Depends(has_role("User"))])
 async def create_location(location: CreateLocationModel, collection: Collection = Depends(get_location_collection)):
     body = location.model_dump()
     result = collection.insert_one(body)
@@ -112,7 +93,7 @@ async def create_location(location: CreateLocationModel, collection: Collection 
     
     return serialize_document(created_location,location_fields_map)
 
-@app.get("/location/{location_id}")
+@app.get("/location/{location_id}", dependencies=[Depends(has_role("User"))])
 async def get_location_by_id(location_id: str, collection: Collection = Depends(get_location_collection)):
     try:
         object_id = ObjectId(location_id)
@@ -124,12 +105,12 @@ async def get_location_by_id(location_id: str, collection: Collection = Depends(
     
     return serialize_document(result, location_fields_map)
 
-@app.get("/locations", response_model=list[Location])
+@app.get("/locations", response_model=list[Location], dependencies=[Depends(has_role("User"))])
 async def get_locations(collection: Collection = Depends(get_location_collection)):
     documents = collection.find()
     return [serialize_document(doc, location_fields_map) for doc in documents]
     
-@app.put("/location/{location_id}", response_model=Location)
+@app.put("/location/{location_id}", response_model=Location, dependencies=[Depends(has_role("User"))])
 async def update_location(location_id: str, data: UpdateLocationModel, collection: Collection = Depends(get_location_collection)):
     try:
         object_id = ObjectId(location_id)
@@ -150,3 +131,4 @@ async def update_location(location_id: str, data: UpdateLocationModel, collectio
     return serialize_document(updated_location, location_fields_map)
     
     
+
