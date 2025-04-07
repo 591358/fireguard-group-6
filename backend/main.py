@@ -1,28 +1,15 @@
 import os
-from typing import Collection, List
+from typing import Collection
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, requests
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from mongomock import ObjectId
-from backend.mongo import (
-    get_location_collection,
-    get_user_collection,
-    location_collection,
-    user_collection,
-)
-from backend.auth import delete_user_from_keycloak, get_admin_token, has_role, validate_token
-from backend.create_user import assign_role_to_user, create_new_user, create_user_in_db
-from backend.models.models import (
-    CreateLocationModel,
-    CreateUser,
-    Location,
-    TokenData,
-    UpdateLocationModel,
-    UpdateUser,
-    User,
-)
-from backend.mongo import serialize_document
+
+from backend.auth import has_role, validate_token
+from backend.models.models import CreateLocationModel, Location, TokenData, UpdateLocationModel
+from backend.mongo import get_location_collection, serialize_document
+from backend.routers.users import users_router
 
 load_dotenv()
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
@@ -36,6 +23,7 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
     auto_error=False,
 )
 app = FastAPI()
+app.include_router(users_router)
 if not TESTING:
 
     async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -48,8 +36,6 @@ else:
     async def get_current_user(token: str = Depends(oauth2_scheme)):
         return TokenData(username="test_user", roles=["Admin", "User"])
 
-
-user_fields_map = {"_id": "_id", "username": "username", "email": "email", "roles": "roles", "keycloak_user_id": "keycloak_user_id"}
 
 location_fields_map = {
     "id": "_id",
@@ -70,74 +56,6 @@ async def protected_endpoint(current_user: TokenData = Depends(get_current_user)
         "message": f"Hello {current_user.username}, you are authenticated!",
         "roles": current_user.roles,
     }
-
-
-@app.post("/create_user/")
-async def create_user_endpoint(user: CreateUser):
-    access_token = await get_admin_token()
-    created_user = await create_new_user(user, access_token)
-    created_user["id"] = str(created_user["id"])
-    if "id" not in created_user:
-        raise HTTPException(status_code=400, detail="User ID not found in Keycloak response")
-    stored_user = await create_user_in_db(user, created_user["id"])
-    try:
-        await assign_role_to_user(created_user["id"], "User", access_token)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to assign role: {str(e)}")
-
-    return {
-        "message": "User created and role assigned",
-        "user": created_user,
-        "stored in db": serialize_document(stored_user, user_fields_map),
-    }
-
-
-@app.get("/users", response_model=List[User], dependencies=[Depends(has_role("Admin"))])
-async def get_all_users(collection: Collection = Depends(get_user_collection)):
-    users = collection.find()
-    return [serialize_document(doc, user_fields_map) for doc in users]
-
-
-@app.delete("/user/{user_id}", dependencies=[Depends(has_role("Admin"))])
-async def delete_user(user_id: str, collection: Collection = Depends(get_user_collection)):
-    try:
-        obj_id = ObjectId(user_id)
-    except:
-        raise HTTPException(status_code=400, detail="Invalid user ID format.")
-
-    user = collection.find_one({"_id": obj_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found in database.")
-
-    keycloak_user_id = user.get("keycloak_user_id")
-    if not keycloak_user_id:
-        raise HTTPException(status_code=500, detail="User is missing Keycloak ID.")
-
-    response = await delete_user_from_keycloak(keycloak_user_id)
-    if "error" in response:
-        raise HTTPException(status_code=response.get("status_code", 500), detail=response.get("detail", "Unknown error during Keycloak deletion"))
-
-    result = collection.delete_one({"_id": obj_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=500, detail="Failed to delete user from database.")
-
-    return {"message": f"User {user_id} deleted successfully from both Keycloak and MongoDB."}
-
-
-@app.put("/user/me")
-async def update_my_user(user_update: UpdateUser, collection=Depends(get_user_collection), current_user=Depends(get_current_user)):
-    if not user_update:
-        raise HTTPException(status_code=400, detail="No update data provided")
-    update_data = user_update.model_dump(exclude_unset=True)
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields to update.")
-    user = collection.find_one({"username": current_user.username})
-    if not user:
-        raise HTTPException(status_code=404, detail="Authenticated user not found")
-    result = collection.update_one({"_id": user["_id"]}, {"$set": update_data})
-    if result.modified_count == 0:
-        return {"Message": "No changes made."}
-    return {"Message": "User profile successfully updated"}
 
 
 @app.post("/locations", response_model=Location, dependencies=[Depends(has_role("User"))])
