@@ -2,7 +2,7 @@ import os
 from typing import Collection, List
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, requests
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from mongomock import ObjectId
 from backend.mongo import (
@@ -19,6 +19,7 @@ from backend.models.models import (
     Location,
     TokenData,
     UpdateLocationModel,
+    UpdateUser,
     User,
 )
 from backend.mongo import serialize_document
@@ -121,6 +122,22 @@ async def delete_user(user_id: str, collection: Collection = Depends(get_user_co
         raise HTTPException(status_code=500, detail="Failed to delete user from database.")
 
     return {"message": f"User {user_id} deleted successfully from both Keycloak and MongoDB."}
+
+
+@app.put("/user/me")
+async def update_my_user(user_update: UpdateUser, collection=Depends(get_user_collection), current_user=Depends(get_current_user)):
+    if not user_update:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    update_data = user_update.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update.")
+    user = collection.find_one({"username": current_user.username})
+    if not user:
+        raise HTTPException(status_code=404, detail="Authenticated user not found")
+    result = collection.update_one({"_id": user["_id"]}, {"$set": update_data})
+    if result.modified_count == 0:
+        return {"Message": "No changes made."}
+    return {"Message": "User profile successfully updated"}
 
 
 @app.post("/locations", response_model=Location, dependencies=[Depends(has_role("User"))])

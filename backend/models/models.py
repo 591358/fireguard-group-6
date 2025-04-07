@@ -36,6 +36,24 @@ class CreateUser(BaseModel):
     email: str
 
 
+class UpdateUser(BaseModel):
+    email: Optional[str] = None
+    password: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
+class AdminUserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    roles: Optional[List[str]] = None
+    password: Optional[str] = None
+
+    class Config:
+        extra = "forbid"
+
+
 class TokenData(BaseModel):
     username: str
     roles: List[str]
