@@ -97,29 +97,34 @@ async def get_all_users(collection: Collection = Depends(get_user_collection)):
     return [serialize_document(doc, user_fields_map) for doc in users]
 
 
-@app.delete("/user", dependencies=[Depends(has_role("Admin"))])
+@app.delete("/user/{user_id}", dependencies=[Depends(has_role("Admin"))])
 async def delete_user(user_id: str, collection: Collection = Depends(get_user_collection)):
     try:
         obj_id = ObjectId(user_id)
-        response = await delete_user_from_keycloak(user_id)
-        if "error" in response:
-            raise HTTPException(status_code=500, detail=response["error"])
     except:
-        raise HTTPException(status_code=404, detail="Invalid user ID format.")
+        raise HTTPException(status_code=400, detail="Invalid user ID format.")
+
+    user = collection.find_one({"_id": obj_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in database.")
+
+    keycloak_user_id = user.get("keycloak_user_id")
+    if not keycloak_user_id:
+        raise HTTPException(status_code=500, detail="User is missing Keycloak ID.")
+
+    response = await delete_user_from_keycloak(keycloak_user_id)
+    if "error" in response:
+        raise HTTPException(status_code=response.get("status_code", 500), detail=response.get("detail", "Unknown error during Keycloak deletion"))
 
     result = collection.delete_one({"_id": obj_id})
-
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise HTTPException(status_code=500, detail="Failed to delete user from database.")
 
-    return {"message": f"User {user_id} deleted successfully."}
+    return {"message": f"User {user_id} deleted successfully from both Keycloak and MongoDB."}
 
 
 @app.post("/locations", response_model=Location, dependencies=[Depends(has_role("User"))])
-async def create_location(
-    location: CreateLocationModel,
-    collection: Collection = Depends(get_location_collection),
-):
+async def create_location(location: CreateLocationModel, collection: Collection = Depends(get_location_collection)):
     body = location.model_dump()
     result = collection.insert_one(body)
     created_location = collection.find_one({"_id": result.inserted_id})
@@ -142,26 +147,14 @@ async def get_location_by_id(location_id: str, collection: Collection = Depends(
     return serialize_document(result, location_fields_map)
 
 
-@app.get(
-    "/locations",
-    response_model=list[Location],
-    dependencies=[Depends(has_role("User"))],
-)
+@app.get("/locations", response_model=list[Location], dependencies=[Depends(has_role("User"))])
 async def get_locations(collection: Collection = Depends(get_location_collection)):
     documents = collection.find()
     return [serialize_document(doc, location_fields_map) for doc in documents]
 
 
-@app.put(
-    "/location/{location_id}",
-    response_model=Location,
-    dependencies=[Depends(has_role("User"))],
-)
-async def update_location(
-    location_id: str,
-    data: UpdateLocationModel,
-    collection: Collection = Depends(get_location_collection),
-):
+@app.put("/location/{location_id}", response_model=Location, dependencies=[Depends(has_role("User"))])
+async def update_location(location_id: str, data: UpdateLocationModel, collection: Collection = Depends(get_location_collection)):
     try:
         object_id = ObjectId(location_id)
     except:
