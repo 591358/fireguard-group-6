@@ -1,6 +1,7 @@
+from typing import List, Optional
+
 from mongomock import ObjectId
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class Location(BaseModel):
