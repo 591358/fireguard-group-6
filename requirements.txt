@@ -6,4 +6,4 @@ httpx
 pymongo
 python-dotenv
 python-jose
-fastapi_keycloak_middleware
+responses>=0.24.0

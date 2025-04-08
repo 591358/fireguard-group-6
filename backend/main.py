@@ -6,10 +6,10 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from mongomock import ObjectId
 
+from backend.app import app
 from backend.auth import has_role, validate_token
 from backend.models.models import CreateLocationModel, Location, TokenData, UpdateLocationModel
 from backend.mongo import get_location_collection, serialize_document
-from backend.routers.users import users_router
 
 load_dotenv()
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
@@ -22,8 +22,6 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
     tokenUrl=f"{KEYCLOAK_URL}/realms/{REALM_NAME}/protocol/openid-connect/token",
     auto_error=False,
 )
-app = FastAPI()
-app.include_router(users_router)
 if not TESTING:
 
     async def get_current_user(token: str = Depends(oauth2_scheme)):

@@ -37,7 +37,16 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
-
+  fastapi-test:
+    build: .
+    depends_on:
+      - mongodb
+      - keycloak
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: ["pytest", "--disable-warnings", "--capture=no", "-v"]
 volumes:
   mongodb_data:
   keycloak_data:
