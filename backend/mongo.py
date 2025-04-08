@@ -23,17 +23,31 @@ def serialize_objectid(obj):
     if isinstance(obj, ObjectId):
         return str(obj)
     raise TypeError(f"ObjectId of type {type(obj)} is not serializable")
-    
-def serialize_document(doc):
-    return {
-        "id": str(doc["_id"]),
-        "locationName": doc["locationName"],
-        "latitude": doc["latitude"],
-        "longitude": doc["longitude"],
-    }
+
+
+def serialize_document(doc, fields_map):
+    """
+    Generic function to serialize MongoDB document.
+
+    Args:
+        doc (dict): The MongoDB document to serialize.
+        fields_map (dict): A mapping of the field names to be serialized for the document.
+
+    Returns:
+        dict: The serialized document with the specified fields.
+    """
+    serialized_doc = {}
+    for field, field_name in fields_map.items():
+        if field_name == "_id":
+            serialized_doc["id"] = str(doc.get(field_name))
+        else:
+            serialized_doc[field] = doc.get(field_name)
+    return serialized_doc
+
 
 def get_location_collection() -> Collection:
     return location_collection
+
 
 def get_user_collection() -> Collection:
     return user_collection

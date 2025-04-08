@@ -34,21 +34,26 @@ async def assign_role_to_user(user_id: str, role_name: str, access_token: str):
         )
         response.raise_for_status()
 
-async def create_user_in_db(user: CreateUser, collection: Collection = user_collection):
+
+async def create_user_in_db(user: CreateUser, keycloak_user_id: str, collection: Collection = user_collection):
     """Stores the user in MongoDB after creation in Keycloak."""
     existing_user = collection.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
-    inserted_user = collection.insert_one(user.model_dump())
-    stored_user = {"id": str(inserted_user.inserted_id), **user.model_dump()}
+    user_data = user.model_dump()
+    user_data["keycloak_user_id"] = keycloak_user_id
+    user_data["Roles"] = ["User"]
+    inserted_user = collection.insert_one(user_data)
+    stored_user = {"id": str(inserted_user.inserted_id), **user_data}
     return stored_user
+
 
 async def create_new_user(user: CreateUser, access_token: str):
     async with httpx.AsyncClient() as client:
         check_user_response = await client.get(
             f"{KEYCLOAK_URL}/admin/realms/{REALM_NAME}/users",
             headers={"Authorization": f"Bearer {access_token}"},
-            params={"email": user.email}  
+            params={"email": user.email},
         )
         check_user_response.raise_for_status()
 
@@ -77,9 +82,8 @@ async def create_new_user(user: CreateUser, access_token: str):
         user_response = await client.get(
             f"{KEYCLOAK_URL}/admin/realms/{REALM_NAME}/users",
             headers={"Authorization": f"Bearer {access_token}"},
-            params={"email": user.email}
+            params={"email": user.email},
         )
         user_response.raise_for_status()
         created_user = user_response.json()[0]
-        return created_user 
-    
+        return created_user
