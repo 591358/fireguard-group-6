@@ -1,5 +1,7 @@
+import os
 from typing import Collection, List
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from mongomock import ObjectId
 
@@ -44,10 +46,31 @@ async def create_user_endpoint(user: CreateUser):
     """
     Creates a new user in Keycloak and stores them in MongoDB.
 
-    - Assigns the default "User" role
-    - Requires valid admin access token for Keycloak operations
+    - Ensures default "User" role exists (creates it if missing)
+    - Assigns the "User" role to the created user
+    - Stores the user in MongoDB
     """
     access_token = await get_admin_token()
+    if not access_token:
+        raise HTTPException(status_code=500, detail="Failed to obtain admin token")
+
+    keycloak_url = os.getenv("KEYCLOAK_URL")
+    realm_name = os.getenv("REALM_NAME")
+    role_name = "User"
+
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+    async with httpx.AsyncClient() as client:
+        role_check_url = f"{keycloak_url}/admin/realms/{realm_name}/roles/{role_name}"
+        role_response = await client.get(role_check_url, headers=headers)
+
+        if role_response.status_code == 404:
+            create_role_url = f"{keycloak_url}/admin/realms/{realm_name}/roles"
+            create_role_payload = {"name": role_name}
+            create_role_response = await client.post(create_role_url, json=create_role_payload, headers=headers)
+            if create_role_response.status_code not in [201, 204]:
+                raise HTTPException(status_code=500, detail=f"Failed to create role '{role_name}'")
+
     created_user = await create_new_user(user, access_token)
     created_user["id"] = str(created_user["id"])
 
@@ -57,14 +80,14 @@ async def create_user_endpoint(user: CreateUser):
     stored_user = await create_user_in_db(user, created_user["id"])
 
     try:
-        await assign_role_to_user(created_user["id"], "User", access_token)
+        await assign_role_to_user(created_user["id"], role_name, access_token)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to assign role: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to assign role '{role_name}': {str(e)}")
 
     return {
-        "message": "User created and role assigned",
+        "message": "User created, role assigned, and user stored in database",
         "user": created_user,
-        "stored in db": serialize_document(stored_user, user_fields_map),
+        "stored_in_db": serialize_document(stored_user, user_fields_map),
     }
 
 

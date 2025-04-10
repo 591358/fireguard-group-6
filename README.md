@@ -1,125 +1,245 @@
-# Fireguard Group 6
+# Fireguard Project
 
-## Running the Project
-To run the project, follow these steps:
+Fireguard is a project for finding the predicted fire-risk for a specific location within a specific timeframe.  
+It utilizes a FastAPI backend, MongoDB for data storage, and Keycloak for authentication and authorization.
 
-1. Install dependencies:
-   ```sh
-   poetry install  # Might not be necessary if already installed
-   ```
 
-2. Create a `.env` file in the `src` folder and add the required credentials as described [here](https://pypi.org/project/dynamic-frcm/).
+## Prerequisites
 
-3. Run the main script:
-   ```sh
-   py main.py
-   ```
+Before you begin, ensure you have the following installed:
 
-4. Navigate to the `backend` folder and start FastAPI:
-   ```sh
-   fastapi dev main.py
-   ```
-   This will start the FastAPI server, and you should see output similar to:
-   
-   ![alt text](images/image.png)
+- [Docker](https://www.docker.com/get-started/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-## Installed Packages
-```sh
-poetry init
-poetry add dynamic-frcm
-poetry add python-dotenv
-pip install "fastapi[standard]"
-pip install pytest httpx mongomock
+
+## Setup and Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone git@github.com:591358/fireguard-group-6.git
+cd fireguard-group-6
 ```
 
 ---
 
-# Creating a FastAPI Endpoint
-FastAPI makes it easy to create and update endpoints. Below is a simplified guide.
+### 2. Configuration
 
-###  Define Your API Route in `main.py`
-```python
-from fastapi import FastAPI, HTTPException, Depends
-from pymongo.collection import Collection
-from bson import ObjectId
-from database import get_location_collection
-from pydantic import BaseModel
+Before running the project, there are a few things you need to do:
 
-app = FastAPI()
+- **Create a `.env` file:** Copy the example `.env` file and fill in the required credentials.
 
-class UpdateLocationModel(BaseModel):
-    name: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    ```bash
+    cp example.env .env
+    ```
 
-@app.put("/location/{location_id}")
-async def update_location(location_id: str, data: UpdateLocationModel, collection: Collection = Depends(get_location_collection)):
-    object_id = ObjectId(location_id)
-    update_data = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
-    
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields provided for update")
+- **Edit the `.env` file:** Modify the `.env` file with your specific configuration details.  
+  Here's a breakdown of the required variables:
 
-    result = collection.update_one({"_id": object_id}, {"$set": update_data})
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Location not found")
+    ```env
+    # --- External API Credentials (e.g., MET API) ---
+    MET_CLIENT_ID=your-met-client-id
+    MET_CLIENT_SECRET=your-met-client-secret
 
-    return {"message": "Location updated", "updated_fields": update_data}
-```
+    # --- MongoDB Credentials and URI ---
+    MONGO_USER=your-mongo-username
+    MONGO_PASSWORD=your-mongo-password
+    MONGO_URI=mongodb://your-mongo-username:your-mongo-password@mongo:27017/fireguard
 
-###  Test with Swagger UI
-Go to:
-```
-http://127.0.0.1:8000/docs
-```
+    # --- Keycloak Authentication Configuration ---
+    KEYCLOAK_URL=http://localhost:8080
+    REALM_NAME=your-realm-name
 
----
+    # --- Client Credentials for Application ---
+    CLIENT_ID=your-client-id
+    CLIENT_SECRET=your-client-secret
 
-# Writing Tests for FastAPI Endpoints
+    # --- Admin Client Credentials for Management Access ---
+    ADMIN_CLIENT_ID=admin-client-id
+    ADMIN_CLIENT_SECRET=admin-client-secret
 
-### Create a Test in `test.py`
+    # --- JWT Configuration ---
+    ALGORITHM=RS256
 
-```python
-import mongomock
-from fastapi.testclient import TestClient
-from backend.main import app, get_location_collection
+    # --- Keycloak Admin User (used to fetch tokens programmatically) ---
+    KEYCLOAK_ADMIN=admin
+    KEYCLOAK_ADMIN_PASSWORD=admin
+    ```
 
-@pytest.fixture
-def client():
-    mock_client = mongomock.MongoClient()
-    app.dependency_overrides[get_location_collection] = lambda: mock_client.db.location_collection
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-
-def test_update_location(client):
-    mock_collection = app.dependency_overrides[get_location_collection]()
-    test_location = {"_id": mongomock.ObjectId(), "name": "Old Name"}
-    mock_collection.insert_one(test_location)
-    location_id = str(test_location["_id"])
-    response = client.put(f"/location/{location_id}", json={"name": "New Name"})
-    assert response.status_code == 200
-    assert response.json()["updated_fields"]["name"] == "New Name"
-```
-
-### Run Tests
-```sh
-pytest -v
-```
+    **Important Notes:**
+    - Replace all `your-...` placeholders with your actual values.
+    - **Keycloak Setup is Required:** You must have a running Keycloak instance configured with a realm and appropriate clients. See the [Keycloak Configuration](#keycloak-configuration) section for details.
 
 ---
 
-# 🛠️ Git Commands Cheat Sheet
-Here are some useful Git commands:
+### 3. Start the Services
 
-- `git clone <repository_url>` → Clone a remote repository
-- `git pull` → Fetch and merge changes from the remote repository
-- `git push` → Push local commits to the remote repository
-- `git add .` → Stage all modified files
-- `git commit -m "<message>"` → Commit staged files with a message
-- `git status` → View the state of your repository
-- `git merge <branch_name>` → Merge another branch into the current one
-- `git checkout -b <branch_name>` → Create a new branch and switch to it
-- `git stash` → Temporarily save uncommitted changes
+```bash
+docker compose up -d
+docker-compose up --build
+```
 
+This will build the FastAPI image and start all services defined in the `compose.yaml` file (FastAPI, MongoDB, and Keycloak).
+
+
+## Keycloak Configuration
+
+After Keycloak is running at [http://localhost:8080](http://localhost:8080), perform the following steps:
+
+
+### 1. Accessing Keycloak Admin Console
+
+Open your web browser and navigate to `http://localhost:8080`.  
+Log in using the credentials defined by the `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` variables in your `.env` file.
+
+
+### 2. Creating a Realm
+
+If you don't already have one, create a new realm.  
+The realm name should match the `REALM_NAME` in your `.env` file.
+
+
+### 3. Creating Clients
+
+You’ll need to create at least **two clients** within your realm:
+
+#### Application Client
+
+This client is used by your FastAPI application to authenticate users.
+
+- **Client ID:** Set to the value of `CLIENT_ID` in your `.env` file.
+- **Access Type:** Set to `confidential` and provide a secret.  
+  The secret should match the `CLIENT_SECRET` in your `.env` file.
+- **Service Accounts Enabled:** Enable this setting to allow backend access and the `Client Credentials` grant type.
+
+![Application Client Configuration](image.png)
+
+
+#### Admin Client
+
+This client is used for administrative tasks (e.g., programmatically fetching tokens).
+
+- **Client ID:** Set to the value of `ADMIN_CLIENT_ID` (or use `admin-cli`) in your `.env` file.
+- **Access Type:** Set to `confidential` and provide a secret.  
+  Either use the one you configure, or find the current one in the credentials tab.  
+  The secret should match the `ADMIN_CLIENT_SECRET` in your `.env` file.
+- **Service Accounts Enabled:** Enable this setting to allow backend access and the `Client Credentials` grant type.
+
+![Admin Client Configuration](image-1.png)
+
+
+#### Service Account Roles
+
+- Assign **all roles** under Service Account Roles (do this for both clients just to be sure).
+
+![Service Account Roles Assignment](image-3.png)
+
+
+### 4. User Setup
+
+Create users within your realm who will be able to access your application.
+
+## Creating a New User
+
+The application provides an endpoint for creating new users, which handles the creation in both Keycloak and the MongoDB database.  
+This process requires administrative privileges.
+
+**Endpoint:** `POST /users/`
+
+Example:
+
+```bash
+POST http://localhost:8000/users/
+
+# Example payload
+{
+  "username": "test_user",
+  "email": "test_user@example.com",
+  "password": "Test1234!"
+}
+```
+
+
+## Usage
+
+Once the services are running, you can access the FastAPI application at [http://localhost:8000](http://localhost:8000).
+
+- **API Documentation:**  
+  Access the automatically generated Swagger UI at [http://localhost:8000/docs](http://localhost:8000/docs). 
+
+---
+
+## Obtaining an Access Token
+
+To authenticate and access secured endpoints, you need to obtain an **access token** from Keycloak.
+
+### Request Details
+
+**Endpoint:**  
+`POST http://localhost:8080/realms/your-realm/protocol/openid-connect/token`
+
+**Headers:**  
+- `Content-Type: application/x-www-form-urlencoded`
+
+**Body Parameters (x-www-form-urlencoded):**
+
+| Key           | Value                        | Description                        |
+| -------------- | ----------------------------- | ---------------------------------- |
+| `client_id`    | Your client ID                | Application client ID from `.env`  |
+| `client_secret`| Your client secret            | Application client secret from `.env` |
+| `username`     | Your username                 | Username of the user logging in    |
+| `password`     | Your password                 | Password of the user logging in    |
+| `grant_type`   | `password`                    | Type of grant to request a token   |
+| `scope`        | `openid`                      | Scope of authentication            |
+
+### Example (using `curl`)
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/realms/your-realm/protocol/openid-connect/token \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'client_id=your-client-id' \
+  --data-urlencode 'client_secret=your-client-secret' \
+  --data-urlencode 'username=your-username' \
+  --data-urlencode 'password=your-password' \
+  --data-urlencode 'grant_type=password' \
+  --data-urlencode 'scope=openid'
+```
+
+**Response Example:**
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 300,
+  "refresh_expires_in": 1800,
+  "refresh_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "not-before-policy": 0,
+  "session_state": "abc123",
+  "scope": "openid email profile"
+}
+```
+
+Once you have the `access_token`, you can include it in the `Authorization` header when making authenticated requests to your FastAPI backend:
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+
+**Important:**  
+
+- Tokens typically expire after a short time (e.g., 5 minutes), so be prepared to refresh the token if needed.
+
+
+## Running Tests
+
+To run the tests, execute the following command:
+
+```bash
+docker compose run fastapi-test
+```
+
+This will execute the `pytest` command defined in the `compose.yaml` file.
 
