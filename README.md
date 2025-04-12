@@ -231,6 +231,8 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 **Important:**  
 
 - Tokens typically expire after a short time (e.g., 5 minutes), so be prepared to refresh the token if needed.
+- If you get an error for user not fully set up yet, you have to either confirm the email, or alter the realm rule to not require email verification / update password.
+![image](https://github.com/user-attachments/assets/832e5ec7-579b-4e51-a1c0-0c4e90ba8799)
 
 
 ## Running Tests
