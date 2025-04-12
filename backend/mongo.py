@@ -1,9 +1,9 @@
 import os
-from mongomock import ObjectId
-from pymongo.mongo_client import MongoClient
-from pymongo.collection import Collection
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
+from mongomock import ObjectId
+from pymongo.collection import Collection
+from pymongo.mongo_client import MongoClient
 
 # Loads the environment variables from the .env file
 load_dotenv()
@@ -42,6 +42,10 @@ def serialize_document(doc, fields_map):
             serialized_doc["id"] = str(doc.get(field_name))
         else:
             serialized_doc[field] = doc.get(field_name)
+    list_fields = ["roles"]
+    for list_field in list_fields:
+        if list_field not in serialized_doc or serialized_doc[list_field] is None:
+            serialized_doc[list_field] = []
     return serialized_doc
 
 

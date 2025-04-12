@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from mongomock import ObjectId
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Location(BaseModel):
@@ -27,7 +27,7 @@ class User(BaseModel):
     _id: ObjectId
     username: str
     email: str
-    roles: List[str]
+    roles: List[str] = Field(default_factory=list)
     keycloak_user_id: str
 
 
