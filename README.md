@@ -231,9 +231,9 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 **Important:**  
 
 - Tokens typically expire after a short time (e.g., 5 minutes), so be prepared to refresh the token if needed.
-- If you get an error for user not fully set up yet, you have to either confirm the email, or alter the realm rule to not require email verification / update password.
+- If you get an error for user not fully set up yet, you have to either confirm the email, or alter the realm rule to not require email verification / update password / update profile / verify profile.
 ![image](https://github.com/user-attachments/assets/832e5ec7-579b-4e51-a1c0-0c4e90ba8799)
-
+- You may also have to create a role for Admin, and assign that role manually in the keycloak admin console / dashboard to the admin user(s) you want.
 
 ## Running Tests
 
