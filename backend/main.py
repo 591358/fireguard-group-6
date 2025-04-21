@@ -1,6 +1,8 @@
 import logging
 import os
+import sys
 
+sys.path.append("/app/dynamic_frcm/src")
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer
@@ -9,7 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 
 from backend.app import app
 from backend.auth import has_role, validate_token
-from backend.models.models import CreateLocationModel, DBLocation, TokenData, UpdateLocationModel
+from backend.models.models import CreateLocationModel, Location, TokenData, UpdateLocationModel
 from backend.mongo import get_location_collection, serialize_document
 
 logging.basicConfig(
@@ -63,7 +65,7 @@ async def protected_endpoint(current_user: TokenData = Depends(get_current_user)
     }
 
 
-@app.post("/locations", response_model=DBLocation, dependencies=[Depends(has_role("User"))])
+@app.post("/locations", response_model=Location, dependencies=[Depends(has_role("User"))])
 async def create_location(location: CreateLocationModel, collection: AsyncIOMotorCollection = Depends(get_location_collection)):
     body = location.model_dump()
     result = await collection.insert_one(body)
@@ -87,13 +89,13 @@ async def get_location_by_id(location_id: str, collection: AsyncIOMotorCollectio
     return serialize_document(result, location_fields_map)
 
 
-@app.get("/locations", response_model=list[DBLocation], dependencies=[Depends(has_role("User"))])
+@app.get("/locations", response_model=list[Location], dependencies=[Depends(has_role("User"))])
 async def get_locations(collection: AsyncIOMotorCollection = Depends(get_location_collection)):
     documents = await collection.find()
-    return [serialize_document(doc, location_fields_map) for doc in documents]
+    return [serialize_document(doc, location_fields_map) async for doc in documents]
 
 
-@app.put("/location/{location_id}", response_model=DBLocation, dependencies=[Depends(has_role("User"))])
+@app.put("/location/{location_id}", response_model=Location, dependencies=[Depends(has_role("User"))])
 async def update_location(location_id: str, data: UpdateLocationModel, collection: AsyncIOMotorCollection = Depends(get_location_collection)):
     try:
         object_id = ObjectId(location_id)

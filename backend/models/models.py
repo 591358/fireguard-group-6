@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from mongomock import ObjectId
@@ -58,3 +59,12 @@ class AdminUserUpdate(BaseModel):
 class TokenData(BaseModel):
     username: str
     roles: List[str]
+
+
+class FireRisk(BaseModel):
+    locationName: str
+    time: datetime
+    risk_value: float
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat()}

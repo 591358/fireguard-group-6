@@ -13,14 +13,5 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 app = FastAPI()
 
-
-@app.get("/")
-async def root():
-    print("🔥 PRINT inside / endpoint")  # This should show up
-    logger.debug("🚀 DEBUG: / endpoint called")  # This should show up
-    logger.info("✅ INFO: / endpoint accessed")  # This should show up
-    return {"message": "Hello from FastAPI app"}
-
-
 app.include_router(users_router)
 app.include_router(firerisk_router)
