@@ -37,13 +37,13 @@ async def assign_role_to_user(user_id: str, role_name: str, access_token: str):
 
 async def create_user_in_db(user: CreateUser, keycloak_user_id: str, collection: Collection = user_collection):
     """Stores the user in MongoDB after creation in Keycloak."""
-    existing_user = collection.find_one({"email": user.email})
+    existing_user = await collection.find_one({"email": user.email})
     if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise HTTPException(status_code=400, detail="User already exists in DB")
     user_data = user.model_dump()
     user_data["keycloak_user_id"] = keycloak_user_id
     user_data["roles"] = ["User"]
-    inserted_user = collection.insert_one(user_data)
+    inserted_user = await collection.insert_one(user_data)
     stored_user = {"id": str(inserted_user.inserted_id), **user_data}
     return stored_user
 

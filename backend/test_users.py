@@ -19,6 +19,45 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 logger = logging.getLogger(__name__)
 
 
+# --- Async wrappers so mongomock works with `await` ---
+class FakeAsyncCursor:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    async def to_list(self, length=None):
+        return list(self.cursor)
+
+    async def __aiter__(self):
+        for item in self.cursor:
+            yield item
+
+
+class FakeAsyncCollection:
+    def __init__(self, collection):
+        self.collection = collection
+
+    def find(self, *args, **kwargs):
+        return FakeAsyncCursor(self.collection.find(*args, **kwargs))
+
+    async def find_one(self, *args, **kwargs):
+        return self.collection.find_one(*args, **kwargs)
+
+    async def insert_one(self, *args, **kwargs):
+        return self.collection.insert_one(*args, **kwargs)
+
+    async def insert_many(self, *args, **kwargs):
+        return self.collection.insert_many(*args, **kwargs)
+
+    async def update_one(self, *args, **kwargs):
+        return self.collection.update_one(*args, **kwargs)
+
+    async def delete_one(self, *args, **kwargs):
+        return self.collection.delete_one(*args, **kwargs)
+
+
+# ------------------------------------------------------
+
+
 @pytest.fixture
 def mock_db():
     mock_client = mongomock.MongoClient()
@@ -72,9 +111,12 @@ def mock_current_user():
 
 @pytest.fixture
 def client(mock_db, mock_current_user):
-    app.dependency_overrides[get_user_collection] = lambda: mock_db
+    # Wrap the sync mongomock collection in our async façade:
+    app.dependency_overrides[get_user_collection] = lambda: FakeAsyncCollection(mock_db)
     app.dependency_overrides[get_current_user] = lambda: mock_current_user
+
     yield TestClient(app)
+
     app.dependency_overrides.clear()
 
 
