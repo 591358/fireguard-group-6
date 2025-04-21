@@ -1,9 +1,9 @@
 import os
-from mongomock import ObjectId
-from pymongo.mongo_client import MongoClient
-from pymongo.collection import Collection
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
+from mongomock import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.collection import Collection
 
 # Loads the environment variables from the .env file
 load_dotenv()
@@ -11,11 +11,12 @@ uri = os.getenv("MONGO_URI")
 
 
 # Create a new client and connect to the server
-client = MongoClient(uri)
+client = AsyncIOMotorClient(uri)
 db = client.Fireguard
 
 location_collection: Collection = db["locations"]
 user_collection: Collection = db["users"]
+fire_risk_collection: Collection = db["firerisks"]
 
 
 def serialize_objectid(obj):
@@ -42,6 +43,10 @@ def serialize_document(doc, fields_map):
             serialized_doc["id"] = str(doc.get(field_name))
         else:
             serialized_doc[field] = doc.get(field_name)
+    list_fields = ["roles"]
+    for list_field in list_fields:
+        if list_field not in serialized_doc or serialized_doc[list_field] is None:
+            serialized_doc[list_field] = []
     return serialized_doc
 
 
@@ -51,3 +56,7 @@ def get_location_collection() -> Collection:
 
 def get_user_collection() -> Collection:
     return user_collection
+
+
+def get_fire_risk_collection() -> Collection:
+    return fire_risk_collection

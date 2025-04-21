@@ -42,7 +42,7 @@ async def create_user_in_db(user: CreateUser, keycloak_user_id: str, collection:
         raise HTTPException(status_code=400, detail="User already exists")
     user_data = user.model_dump()
     user_data["keycloak_user_id"] = keycloak_user_id
-    user_data["Roles"] = ["User"]
+    user_data["roles"] = ["User"]
     inserted_user = collection.insert_one(user_data)
     stored_user = {"id": str(inserted_user.inserted_id), **user_data}
     return stored_user

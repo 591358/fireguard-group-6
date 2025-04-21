@@ -10,8 +10,10 @@ services:
       - .env
     environment:
       - LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app/backend:/app/dynamic_frcm/src
+
     volumes:
-      - ./.env:/.env
+      - .:/app
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level debug
 
   keycloak:
@@ -23,9 +25,9 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - keycloak_data:/opt/keycloak/data
-    command: ["start-dev"]
+    command: [ "start-dev" ]
     healthcheck:
-      test: ["CMD", "curl", "--silent", "--fail", "http://localhost:8080"]
+      test: [ "CMD", "curl", "--silent", "--fail", "http://localhost:8080" ]
       interval: 10s
       retries: 5
 
@@ -35,7 +37,9 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
-
+    command:
+      - --tlsMode=disabled
+      - --setParameter=diagnosticDataCollectionEnabled=false
   fastapi-test:
     build: .
     depends_on:
@@ -43,9 +47,11 @@ services:
       - keycloak
     env_file:
       - .env
+    environment:
+      - PYTHONPATH=/app/backend:/app/dynamic_frcm/src
     volumes:
       - .:/app
-    command: ["pytest", "--disable-warnings", "--capture=no", "-v"]
+    command: [ "pytest", "--disable-warnings", "--capture=no", "-v" ]
 
 volumes:
   mongodb_data:

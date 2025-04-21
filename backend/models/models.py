@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import List, Optional
 
 from mongomock import ObjectId
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Location(BaseModel):
@@ -27,7 +28,7 @@ class User(BaseModel):
     _id: ObjectId
     username: str
     email: str
-    roles: List[str]
+    roles: List[str] = Field(default_factory=list)
     keycloak_user_id: str
 
 
@@ -58,3 +59,12 @@ class AdminUserUpdate(BaseModel):
 class TokenData(BaseModel):
     username: str
     roles: List[str]
+
+
+class FireRisk(BaseModel):
+    locationName: str
+    time: datetime
+    risk_value: float
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat()}
