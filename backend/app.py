@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI
 
 from backend.routers.firerisks import firerisk_router
+from backend.routers.locations import locations_router
 from backend.routers.users import users_router
 
 logging.basicConfig(
@@ -15,3 +16,4 @@ app = FastAPI()
 
 app.include_router(users_router)
 app.include_router(firerisk_router)
+app.include_router(locations_router)

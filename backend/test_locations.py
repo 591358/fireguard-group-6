@@ -37,7 +37,7 @@ class FakeAsyncCollection:
     def __init__(self, collection):
         self.collection = collection
 
-    async def find(self, *args, **kwargs):
+    def find(self, *args, **kwargs):
         return FakeAsyncCursor(self.collection.find(*args, **kwargs))
 
     async def find_one(self, *args, **kwargs):
@@ -87,7 +87,7 @@ def client(mock_current_user):
 
 
 def test_get_locations(client):
-    response = client.get("/locations")
+    response = client.get("/locations/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -133,7 +133,7 @@ def test_get_location_by_id(client):
     mock_collection.collection.insert_one(payload)
     location_id = str(payload["_id"])
 
-    response = client.get(f"/location/{location_id}")
+    response = client.get(f"/locations/{location_id}")
 
     if response.status_code != 200:
         logger.error("Failed to fetch location: %s", response.json())
@@ -160,7 +160,7 @@ def test_location_put(client):
 
     update_payload = {"locationName": "Oslo", "latitude": 58}
 
-    response = client.put(f"/location/{location_id}", json=update_payload)
+    response = client.put(f"/locations/{location_id}", json=update_payload)
 
     assert response.status_code == 200, response.text
 

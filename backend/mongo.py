@@ -26,28 +26,39 @@ def serialize_objectid(obj):
     raise TypeError(f"ObjectId of type {type(obj)} is not serializable")
 
 
-def serialize_document(doc, fields_map):
+def serialize_document(
+    doc: dict,
+    fields_map: dict,
+    default_list_fields: list[str] | None = None,
+) -> dict:
     """
-    Generic function to serialize MongoDB document.
+    Generic function to serialize a MongoDB document.
 
     Args:
-        doc (dict): The MongoDB document to serialize.
-        fields_map (dict): A mapping of the field names to be serialized for the document.
+      • doc: the raw MongoDB document
+      • fields_map: mapping { output_field_name: document_field_name }
+      • default_list_fields: optional list of fields to ensure exist as lists
 
     Returns:
-        dict: The serialized document with the specified fields.
+      A dict with only the fields in `fields_map`, plus any default_list_fields
+      initialized to [] if missing.
     """
-    serialized_doc = {}
-    for field, field_name in fields_map.items():
-        if field_name == "_id":
-            serialized_doc["id"] = str(doc.get(field_name))
+    serialized: dict = {}
+
+    # copy just the mapped fields
+    for out_field, doc_field in fields_map.items():
+        if doc_field == "_id":
+            # convert ObjectId -> str
+            serialized[out_field] = str(doc.get(doc_field))
         else:
-            serialized_doc[field] = doc.get(field_name)
-    list_fields = ["roles"]
-    for list_field in list_fields:
-        if list_field not in serialized_doc or serialized_doc[list_field] is None:
-            serialized_doc[list_field] = []
-    return serialized_doc
+            serialized[out_field] = doc.get(doc_field)
+
+    # inject any default-list fields (e.g. Roles) if requested
+    if default_list_fields:
+        for lf in default_list_fields:
+            serialized.setdefault(lf, [])
+
+    return serialized
 
 
 def get_location_collection() -> Collection:
